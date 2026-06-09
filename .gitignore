@@ -1,0 +1,3 @@
+.sisyphus/
+*.test
+coverage.out
