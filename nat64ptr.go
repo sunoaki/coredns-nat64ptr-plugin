@@ -133,12 +133,26 @@ func (r *responseRewriter) WriteMsg(msg *dns.Msg) error {
 		rewritten.Question[i].Name = r.originalName
 	}
 
+	hasPTR := false
 	for _, answer := range rewritten.Answer {
+		if _, ok := answer.(*dns.PTR); ok {
+			hasPTR = true
+		}
+	}
+
+	answers := rewritten.Answer[:0]
+	for _, answer := range rewritten.Answer {
+		if hasPTR && answer.Header().Rrtype == dns.TypeCNAME {
+			continue
+		}
+
 		answer.Header().Name = r.originalName
 		if ptr, ok := answer.(*dns.PTR); ok && r.ptrSuffix != "" {
 			ptr.Ptr = dns.Fqdn(strings.TrimSuffix(ptr.Ptr, ".") + "." + strings.TrimSuffix(r.ptrSuffix, "."))
 		}
+		answers = append(answers, answer)
 	}
+	rewritten.Answer = answers
 
 	return r.ResponseWriter.WriteMsg(rewritten)
 }

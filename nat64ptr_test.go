@@ -124,12 +124,14 @@ func TestServeDNSAppendsPTRSuffix(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cname := recorder.msg.Answer[0].(*dns.CNAME)
-	if got, want := cname.Target, "alias.dn42."; got != want {
-		t.Fatalf("CNAME target = %q, want %q", got, want)
+	if got, want := len(recorder.msg.Answer), 1; got != want {
+		t.Fatalf("answer count = %d, want %d", got, want)
 	}
 
-	ptr := recorder.msg.Answer[1].(*dns.PTR)
+	ptr := recorder.msg.Answer[0].(*dns.PTR)
+	if got := ptr.Header().Name; got != exampleIPv6Name {
+		t.Fatalf("PTR owner = %q, want %q", got, exampleIPv6Name)
+	}
 	if got, want := ptr.Ptr, "burble.dn42.42xlat.sunoaki.net."; got != want {
 		t.Fatalf("PTR target = %q, want %q", got, want)
 	}
