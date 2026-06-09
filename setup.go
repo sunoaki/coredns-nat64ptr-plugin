@@ -30,7 +30,7 @@ func parse(c *caddy.Controller) (*NAT64PTR, error) {
 
 	for c.Next() {
 		args := c.RemainingArgs()
-		if len(args) < 1 || len(args) > 2 {
+		if len(args) < 1 || len(args) > 3 {
 			return nil, c.ArgErr()
 		}
 
@@ -54,8 +54,11 @@ func parse(c *caddy.Controller) (*NAT64PTR, error) {
 
 		network.IP = ip.To16()
 		configured = newNAT64PTR(network)
-		if len(args) == 2 {
+		if len(args) >= 2 {
 			configured.setBackendSuffix(args[1])
+		}
+		if len(args) == 3 {
+			configured.setPTRSuffix(args[2])
 		}
 	}
 

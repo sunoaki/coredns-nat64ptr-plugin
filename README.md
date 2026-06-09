@@ -19,10 +19,14 @@ This is useful when IPv6-only clients behind NAT64 need reverse DNS for IPv4 des
 }
 ```
 
-Only PTR questions below the configured `/96` reverse zone are handled. Other requests are passed to the next plugin unchanged. A second optional argument configures the backend reverse suffix; it defaults to `in-addr.arpa.`.
+Only PTR questions below the configured `/96` reverse zone are handled. Other requests are passed to the next plugin unchanged. A second optional argument configures the backend reverse suffix; it defaults to `in-addr.arpa.`. A third optional argument appends a suffix to returned PTR targets.
 
 ```corefile
 nat64ptr 2602:2a3:4:9b64:2::/96 in-addr.arpa.
+```
+
+```corefile
+nat64ptr 2602:2a3:4:9b64:2::/96 in-addr.arpa. 42xlat.sunoaki.net
 ```
 
 ## Query Flow
@@ -33,7 +37,7 @@ For `2602:2a3:4:9b64:2::172.23.0.53`, the IPv6 reverse name starts with the embe
 5.3.0.0.7.1.c.a...
 ```
 
-`nat64ptr` converts those nibbles into `53.0.23.172.in-addr.arpa.`, forwards the rewritten request to the next plugin, then rewrites the response `Question` and `Answer` owner names back to the original IPv6 `ip6.arpa.` name.
+`nat64ptr` converts those nibbles into `53.0.23.172.in-addr.arpa.`, forwards the rewritten request to the next plugin, then rewrites the response `Question` and `Answer` owner names back to the original IPv6 `ip6.arpa.` name. If a PTR suffix is configured, a returned target such as `burble.dn42.` becomes `burble.dn42.42xlat.sunoaki.net.`.
 
 ## CoreDNS Integration
 

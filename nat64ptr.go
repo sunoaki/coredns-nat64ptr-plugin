@@ -21,6 +21,7 @@ type NAT64PTR struct {
 	prefix        net.IP
 	reverseSuffix string
 	backendSuffix string
+	ptrSuffix     string
 }
 
 func (n *NAT64PTR) Name() string { return pluginName }
@@ -46,6 +47,7 @@ func (n *NAT64PTR) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Ms
 	rewriter := &responseRewriter{
 		ResponseWriter: w,
 		originalName:   originalName,
+		ptrSuffix:      n.ptrSuffix,
 	}
 
 	return plugin.NextOrFailure(n.Name(), n.Next, ctx, rewriter, r)
@@ -67,6 +69,10 @@ func (n *NAT64PTR) setBackendSuffix(suffix string) {
 	n.backendSuffix = dns.Fqdn(suffix)
 }
 
+func (n *NAT64PTR) setPTRSuffix(suffix string) {
+	n.ptrSuffix = dns.Fqdn(suffix)
+}
+
 func (n *NAT64PTR) ipv4ReverseName(name string) (string, bool) {
 	labels := dns.SplitDomainName(name)
 	if len(labels) < 8 {
@@ -74,7 +80,7 @@ func (n *NAT64PTR) ipv4ReverseName(name string) (string, bool) {
 	}
 
 	bytes := make([]byte, 4)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		// ip6.arpa stores each byte as reversed nibbles, so decode high+low.
 		lo := labels[i*2]
 		hi := labels[i*2+1]
@@ -118,6 +124,7 @@ func reverseSuffix(ip net.IP, prefixBits int) string {
 type responseRewriter struct {
 	dns.ResponseWriter
 	originalName string
+	ptrSuffix    string
 }
 
 func (r *responseRewriter) WriteMsg(msg *dns.Msg) error {
@@ -128,6 +135,9 @@ func (r *responseRewriter) WriteMsg(msg *dns.Msg) error {
 
 	for _, answer := range rewritten.Answer {
 		answer.Header().Name = r.originalName
+		if ptr, ok := answer.(*dns.PTR); ok && r.ptrSuffix != "" {
+			ptr.Ptr = dns.Fqdn(strings.TrimSuffix(ptr.Ptr, ".") + "." + strings.TrimSuffix(r.ptrSuffix, "."))
+		}
 	}
 
 	return r.ResponseWriter.WriteMsg(rewritten)
